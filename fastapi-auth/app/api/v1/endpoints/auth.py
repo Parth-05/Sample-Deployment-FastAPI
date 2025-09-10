@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
+import logging
 
 from app.api.deps import get_db, get_current_user
 from app.schemas.profile import ProfileRegister, ProfileOut, Token, Login, AuthData
@@ -69,6 +70,7 @@ async def login_json(payload: Login, db: AsyncSession = Depends(get_db)):
     try:
         profile = await crud_profile.get_by_id(db, user_id)
     except Exception:
+        logging.exception("DB connect/query failed for user_id=%s", user_id)
         return JSONResponse(
         status_code=502,
         content=fail(code=502, message="Database unavailable").model_dump(mode="json"),
