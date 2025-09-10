@@ -15,7 +15,10 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy.pool import NullPool
 from app.core.config import settings
 
-ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+# ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+ssl_ctx = ssl.create_default_context()
+ssl_ctx.check_hostname = False
+ssl_ctx.verify_mode = ssl.CERT_NONE
 
 # Serverless-friendly engine: no long-lived pools, TLS on asyncpg, pre-ping
 engine = create_async_engine(
