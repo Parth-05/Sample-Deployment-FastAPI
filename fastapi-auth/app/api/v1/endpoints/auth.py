@@ -51,7 +51,7 @@ async def register(payload: ProfileRegister, db: AsyncSession = Depends(get_db))
     )
 
 #  Login User
-@router.post("/login", response_model=Token)
+@router.post("/login")
 async def login_json(payload: Login, db: AsyncSession = Depends(get_db)):
     # check credentials with supabase
     try:
@@ -81,11 +81,14 @@ async def login_json(payload: Login, db: AsyncSession = Depends(get_db)):
         refresh_token=refresh_token,
     )
 
-    profile = AuthData(token=token_payload, profile=profile)
+    # ORM -> Pydantic
+    profile_out = ProfileOut.model_validate(profile, from_attributes=True)
+
+    data = AuthData(token=token_payload, profile=profile_out).model_dump(mode="json")
     # return the profile data
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        content=ok(profile, message=MSG_SUCCESS, code=status.HTTP_200_OK).model_dump()
+        content=ok(data, message=MSG_SUCCESS, code=status.HTTP_200_OK).model_dump(mode="json")
     )
 
 @router.get("/me", response_model=ProfileOut)

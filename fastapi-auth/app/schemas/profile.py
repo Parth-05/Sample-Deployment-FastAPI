@@ -1,5 +1,5 @@
 from typing import Optional, Union, List
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from app.models.enums import UserRole
 
 class ProfileBase(BaseModel):
@@ -23,6 +23,7 @@ class ProfileRegister(ProfileBase):
     client: Optional[RegisterClientFields] = None
 
 class ProfileOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: str
     name: Optional[str]
     email: EmailStr
@@ -30,8 +31,8 @@ class ProfileOut(BaseModel):
     user_type: Optional[UserRole]          # <-- Enum in responses too
     is_active: bool
 
-    class Config:
-        from_attributes = True
+    # class Config:
+    #     from_attributes = True
         
 class Token(BaseModel):
     access_token: str
