@@ -28,27 +28,35 @@ async def register(payload: ProfileRegister, db: AsyncSession = Depends(get_db))
             status_code=status.HTTP_400_BAD_REQUEST,
             content=fail(code=status.HTTP_400_BAD_REQUEST, message=MSG_USER__EXISTS).model_dump() #converts the Pydantic model into a plain dict so JSONResponse can serialize it
         )
+    try:
+        # hash the password
+        hashed = pwd_context.hash(payload.password)
 
-    # hash the password
-    hashed = pwd_context.hash(payload.password)
-
-    # Create profile
-    profile = await crud_profile.create_profile_with_role(
-        db,
-        name=payload.name,
-        email=payload.email,
-        plain_password=payload.password,     
-        hashed_password=hashed,              
-        phone=payload.phone,
-        user_type=payload.user_type,
-        trainer_fields=(payload.trainer.model_dump() if payload.trainer else None),
-        client_fields=(payload.client.model_dump() if payload.client else None),
+        # Create profile
+        profile = await crud_profile.create_profile_with_role(
+            db,
+            name=payload.name,
+            email=payload.email,
+            plain_password=payload.password,     
+            hashed_password=hashed,              
+            phone=payload.phone,
+            user_type=payload.user_type,
+            trainer_fields=(payload.trainer.model_dump() if payload.trainer else None),
+            client_fields=(payload.client.model_dump() if payload.client else None),
+        )
+    except Exception as e:
+        await db.rollback()
+        logging.error(f"DB connect/query failed for email={payload.email}: {e}\n{traceback.format_exc()}")
+        return JSONResponse(
+        status_code=502,
+        content=fail(code=502, message="Database unavailable: {e}").model_dump(mode="json"),
     )
-
+    # 4) serialize to output shape
+    profile_out = ProfileOut.model_validate(profile, from_attributes=True)
     # return the created profile data
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
-        content=ok(profile, message=MSG_REGISTERED, code=status.HTTP_201_CREATED).model_dump()
+        content=ok(profile_out, message=MSG_REGISTERED, code=status.HTTP_201_CREATED).model_dump()
     )
 
 #  Login User
