@@ -66,7 +66,14 @@ async def login_json(payload: Login, db: AsyncSession = Depends(get_db)):
             content=fail(code=status.HTTP_400_BAD_REQUEST, message=MSG_INVALID_CREDENTIALS).model_dump()
         )
     # Fetch user profile from DB
-    profile = await crud_profile.get_by_id(db, user_id)
+    try:
+        profile = await crud_profile.get_by_id(db, user_id)
+    except Exception:
+        return JSONResponse(
+        status_code=502,
+        content=fail(code=502, message="Database unavailable").model_dump(mode="json"),
+    )
+    # profile = await crud_profile.get_by_id(db, user_id)
     # if profile not found, return error
     if not profile:
         return JSONResponse(
