@@ -8,14 +8,23 @@ from app.models.client import Client
 from app.models.enums import UserRole
 from app.services.supabase_auth import signup_and_get_tokens
 from app.schemas.profile import Token, AuthData
+import logging
 
 class CRUDProfile:
     async def get_by_email(self, db: AsyncSession, email: str) -> Optional[Profile]:
-        res = await db.execute(select(Profile).where(Profile.email == email))
-        return res.scalar_one_or_none()
+        try:
+            res = await db.execute(select(Profile).where(Profile.email == email))
+            return res.scalar_one_or_none()
+        except Exception as e:
+            logging.error("DB error get_by_email email=%s", email)
+            raise e
 
     async def get_by_id(self, db: AsyncSession, id: str) -> Optional[Profile]:
-        return await db.get(Profile, id)
+        try:
+            return await db.get(Profile, id)
+        except Exception as e:
+            logging.error("DB error get_by_id id=%s", id)
+            raise e
 
     async def create_profile_with_role(
         self,
@@ -30,14 +39,18 @@ class CRUDProfile:
         trainer_fields: Optional[dict] = None,
         client_fields: Optional[dict] = None,
     ) -> Profile:
-        # 1) Create in Supabase Auth -> returns the auth user id (satisfies FK)
-        sess = await signup_and_get_tokens(
-            email=email,
-            password=plain_password,
-            full_name=name,
-            phone=phone,
-            role=(user_type.value if user_type else None),
-        )
+        try:
+            # 1) Create in Supabase Auth -> returns the auth user id (satisfies FK)
+            sess = await signup_and_get_tokens(
+                email=email,
+                password=plain_password,
+                full_name=name,
+                phone=phone,
+                role=(user_type.value if user_type else None),
+            )
+        except Exception as e:
+            logging.error(f"Supabase signup failed for email={email}: {e}")
+            raise e
 
         # 2) Insert into profiles using the SAME id
         profile = Profile(
@@ -82,7 +95,7 @@ class CRUDProfile:
 
         try:
             await db.commit()
-        except IntegrityError:
+        except Exception as e:
             await db.rollback()
             raise
 
