@@ -33,7 +33,7 @@ async def register(payload: ProfileRegister, db: AsyncSession = Depends(get_db))
         hashed = pwd_context.hash(payload.password)
 
         # Create profile
-        profile = await crud_profile.create_profile_with_role(
+        result = await crud_profile.create_profile_with_role(
             db,
             name=payload.name,
             email=payload.email,
@@ -51,8 +51,9 @@ async def register(payload: ProfileRegister, db: AsyncSession = Depends(get_db))
         status_code=502,
         content=fail(code=502, message="Database unavailable: {e}").model_dump(mode="json"),
     )
+    profile_model = result.profile
     # 4) serialize to output shape
-    profile_out = ProfileOut.model_validate(profile, from_attributes=True)
+    profile_out = ProfileOut.model_validate(profile_model, from_attributes=True)
     # return the created profile data
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
